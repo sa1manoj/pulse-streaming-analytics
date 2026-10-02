@@ -1,0 +1,16 @@
+# local: DuckDB over the parquet written by the stream job (or `make fixture`)
+# bigquery: the GCP datasets created by infra/gcp (auth via gcloud ADC or a key file)
+pulse:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'pulse.duckdb') }}"
+      threads: 4
+    bigquery:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT', 'set-GCP_PROJECT') }}"
+      dataset: pulse_analytics
+      location: "{{ env_var('GCP_LOCATION', 'US') }}"
+      threads: 4

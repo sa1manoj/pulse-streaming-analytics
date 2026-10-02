@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_events
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+      - name: session_id
+        tests: [not_null]
+      - name: user_id
+        tests: [not_null]
+      - name: event_type
+        tests:
+          - not_null
+          - accepted_values: { values: [page_view, add_to_cart, checkout, purchase] }
+      - name: variant
+        tests:
+          - not_null
+          - accepted_values: { values: [control, treatment] }
+      - name: event_ts
+        tests: [not_null]
+
+  - name: stg_minute_metrics
+    tests:
+      - unique_combination: { columns: [window_start, variant] }
+    columns:
+      - name: window_start
+        tests: [not_null]
+      - name: purchases
+        tests: [not_null]
+      - name: revenue
+        tests: [not_null]

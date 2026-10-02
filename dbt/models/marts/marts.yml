@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: fct_sessions
+    columns:
+      - name: session_id
+        tests: [unique, not_null]
+      - name: variant
+        tests:
+          - accepted_values: { values: [control, treatment] }
+      - name: converted
+        tests:
+          - accepted_values: { values: [0, 1], quote: false }
+      - name: revenue
+        tests: [not_null, non_negative]
+
+  - name: fct_daily_funnel
+    description: >
+      Daily funnel by variant. Each step should be <= the step before it. This is
+      a warning, not an error: an event dropped by the 10-minute watermark can
+      remove an earlier funnel step while a later one survives.
+    tests:
+      - unique_combination: { columns: [session_date, variant] }
+      - funnel_is_monotonic:
+          config: { severity: warn }
+    columns:
+      - name: sessions
+        tests: [not_null]
+      - name: conversion_rate
+        tests: [not_null, between_zero_and_one]
+
+  - name: ab_variant_summary
+    columns:
+      - name: variant
+        tests: [unique, not_null]
+      - name: conversion_rate
+        tests: [between_zero_and_one]

@@ -1,0 +1,19 @@
+name: pulse
+version: "1.0.0"
+config-version: 2
+profile: pulse
+
+model-paths: ["models"]
+test-paths: ["tests"]
+target-path: target
+clean-targets: [target, dbt_packages]
+
+vars:
+  raw_dataset: pulse_raw
+
+models:
+  pulse:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

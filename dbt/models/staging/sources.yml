@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Written by the Spark stream job (src/pulse/jobs/stream.py). Locally these
+      are parquet folders, one per micro-batch; on GCP they are BigQuery tables
+      in the raw dataset. A replayed micro-batch can appear twice with a new
+      _batch_id, so staging deduplicates.
+    schema: "{{ var('raw_dataset') }}"
+    meta:
+      external_location: "read_parquet('{{ env_var('PULSE_DATA', '../data') }}/{name}/*/*.parquet', union_by_name = true)"
+    tables:
+      - name: events
+      - name: minute_metrics
