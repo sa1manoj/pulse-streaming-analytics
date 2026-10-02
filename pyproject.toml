@@ -21,7 +21,7 @@ dependencies = [
 spark = ["pyspark==4.0.1"]
 gcp = ["google-cloud-bigquery[pandas]>=3.25", "dbt-bigquery>=1.9"]
 dbt = ["dbt-duckdb>=1.9", "duckdb>=1.1"]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "pytest-github-actions-annotate-failures>=0.2", "ruff>=0.6"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
