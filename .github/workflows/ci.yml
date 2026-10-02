@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install ruff
+      - run: ruff check .
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - run: pip install -e ".[spark,dev]"
+      - name: pytest (includes Spark watermark/dedup streaming tests)
+        run: pytest -q
+
+  dbt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install -e ".[dbt]"
+      - name: Synthetic raw layer (includes a replayed micro-batch)
+        run: python -m pulse.fixtures --out "$GITHUB_WORKSPACE/data_fixture"
+      - name: dbt build (models + tests)
+        working-directory: dbt
+        env:
+          PULSE_DATA: ${{ github.workspace }}/data_fixture
+          DUCKDB_PATH: ${{ github.workspace }}/ci.duckdb
+        run: dbt build --profiles-dir .
+
+  airflow-dag:
+    runs-on: ubuntu-latest
+    env:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install Airflow with official constraints
+        run: |
+          pip install "apache-airflow==2.10.5" pytest \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.11.txt"
+      - name: DAG integrity test
+        run: pytest -q tests/test_dag_integrity.py
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - working-directory: infra/gcp
+        run: |
+          terraform fmt -check
+          terraform init -backend=false
+          terraform validate
