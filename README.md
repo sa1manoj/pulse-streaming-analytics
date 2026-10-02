@@ -1,5 +1,7 @@
 # Pulse: Streaming Clickstream Analytics
 
+[![ci](https://github.com/Sa1manoj/pulse-streaming-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/Sa1manoj/pulse-streaming-analytics/actions/workflows/ci.yml)
+
 Real-time clickstream pipeline with late-event and duplicate handling,
 monitoring and alerting, a daily dbt build behind a freshness gate, A/B test
 analysis, and Terraform for GCP.
