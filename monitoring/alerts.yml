@@ -1,0 +1,43 @@
+groups:
+  - name: pulse-stream
+    rules:
+      - alert: PulseStreamStalled
+        expr: time() - max by (query) (pulse_last_progress_timestamp_seconds) > 120
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Streaming query {{ $labels.query }} has not reported progress for 2+ minutes"
+
+      - alert: PulseMetricsEndpointDown
+        expr: up{job="pulse-stream"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Spark driver metrics endpoint is down (job crashed or not started)"
+
+      - alert: PulseKafkaLagHigh
+        expr: max by (query) (pulse_kafka_offsets_behind_latest) > 50000
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.query }} is {{ $value }} offsets behind Kafka for 5+ minutes"
+
+      - alert: PulseLateEventsSpike
+        expr: sum by (query) (rate(pulse_rows_dropped_by_watermark_total[10m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 1 event/s arriving after the 10-minute watermark ({{ $labels.query }})"
+
+      - alert: PulseBatchesSlow
+        expr: max by (query) (pulse_batch_duration_seconds) > 15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Micro-batches take longer than the 15s trigger interval ({{ $labels.query }})"
+
+      - alert: PulseQueryFailed
+        expr: increase(pulse_query_failures_total[5m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "A streaming query terminated with an error"
