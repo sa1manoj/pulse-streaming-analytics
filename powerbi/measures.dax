@@ -1,0 +1,40 @@
+// Pulse Power BI measures
+// Model: fct_daily_funnel (fact), ab_variant_summary, plus a Date table marked as date table
+// related on 'Date'[Date] -> fct_daily_funnel[session_date].
+
+Sessions = SUM ( fct_daily_funnel[sessions] )
+
+Converted Sessions = SUM ( fct_daily_funnel[converted_sessions] )
+
+Revenue = SUM ( fct_daily_funnel[revenue] )
+
+Conversion Rate = DIVIDE ( [Converted Sessions], [Sessions] )
+
+Cart Rate = DIVIDE ( SUM ( fct_daily_funnel[cart_sessions] ), [Sessions] )
+
+Checkout to Purchase = DIVIDE ( [Converted Sessions], SUM ( fct_daily_funnel[checkout_sessions] ) )
+
+Revenue per Session = DIVIDE ( [Revenue], [Sessions] )
+
+// Rolling 7-day revenue ending on the date in context
+Revenue 7d =
+CALCULATE (
+    [Revenue],
+    DATESINPERIOD ( 'Date'[Date], MAX ( 'Date'[Date] ), -7, DAY )
+)
+
+// Conversion for each variant regardless of the variant slicer
+Conversion Control =
+CALCULATE ( [Conversion Rate], fct_daily_funnel[variant] = "control" )
+
+Conversion Treatment =
+CALCULATE ( [Conversion Rate], fct_daily_funnel[variant] = "treatment" )
+
+// Relative lift of treatment over control
+Conversion Lift % = DIVIDE ( [Conversion Treatment] - [Conversion Control], [Conversion Control] )
+
+// Week-over-week change in sessions
+Sessions WoW % =
+VAR cur = [Sessions]
+VAR prev = CALCULATE ( [Sessions], DATEADD ( 'Date'[Date], -7, DAY ) )
+RETURN DIVIDE ( cur - prev, prev )
