@@ -25,18 +25,24 @@ WATERMARK = "10 minutes"
 WINDOW = "1 minute"
 
 _TYPES = {"string": T.StringType(), "double": T.DoubleType(), "timestamp": T.StringType()}
-EVENT_SCHEMA = T.StructType([T.StructField(n, _TYPES[t]) for n, t in FIELDS])
+CORRUPT = "_corrupt_record"
+EVENT_SCHEMA = T.StructType(
+    [T.StructField(n, _TYPES[t]) for n, t in FIELDS] + [T.StructField(CORRUPT, T.StringType())]
+)
 
 
 def parse(raw: DataFrame) -> tuple[DataFrame, DataFrame]:
     """Kafka rows (value: string/binary) -> (valid events, quarantined rows with a reason)."""
     value = F.col("value").cast("string")
-    parsed = raw.select(value.alias("raw"), F.from_json(value, EVENT_SCHEMA).alias("e"))
+    # PERMISSIVE mode yields a struct of nulls for malformed JSON (not a null struct);
+    # the corrupt-record column is how we tell "malformed" apart from "missing fields".
+    opts = {"mode": "PERMISSIVE", "columnNameOfCorruptRecord": CORRUPT}
+    parsed = raw.select(value.alias("raw"), F.from_json(value, EVENT_SCHEMA, opts).alias("e"))
     e = F.col("e")
     ts = F.to_timestamp(e.getField("event_ts"))
 
     reason = (
-        F.when(e.isNull(), F.lit("unparseable_json"))
+        F.when(e.isNull() | e.getField(CORRUPT).isNotNull(), F.lit("unparseable_json"))
         .when(e.getField("event_id").isNull(), F.lit("missing_event_id"))
         .when(ts.isNull(), F.lit("bad_event_ts"))
         .when(~e.getField("event_type").isin(*EVENT_TYPES), F.lit("unknown_event_type"))

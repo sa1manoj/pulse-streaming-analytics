@@ -20,7 +20,7 @@ def test_no_import_errors(dagbag):
 
 
 def test_pulse_daily_shape(dagbag):
-    dag = dagbag.get_dag("pulse_daily")
+    dag = dagbag.dags.get("pulse_daily")  # parsed from file; get_dag() would query the metadata DB
     assert dag is not None
     assert [t.task_id for t in dag.topological_sort()] == ["check_freshness", "dbt_build", "ab_report"]
     assert dag.catchup is False
@@ -28,5 +28,5 @@ def test_pulse_daily_shape(dagbag):
 
 
 def test_every_task_retries(dagbag):
-    for task in dagbag.get_dag("pulse_daily").tasks:
+    for task in dagbag.dags["pulse_daily"].tasks:
         assert task.retries >= 1, task.task_id
